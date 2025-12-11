@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin Dashboard — Green Coast Audio</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* small admin-specific tweaks (keeps your site's look) */
+    .admin-header{display:flex;justify-content:space-between;align-items:center;padding:14px;background:linear-gradient(90deg,#0b8f6e,#049b74);color:#fff;border-radius:0}
+    .admin-main{padding:20px}
+    .form-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+    .form-row input{flex:1;padding:10px;border-radius:8px;border:1px solid #e6e6e6}
+    .product-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:12px}
+    .card{background:#fff;border-radius:12px;padding:12px;box-shadow:0 6px 18px rgba(12,12,12,0.06)}
+    .card img{width:100%;height:140px;object-fit:cover;border-radius:8px}
+    .card h4{margin:8px 0 4px}
+    .card .actions{display:flex;gap:8px;margin-top:8px}
+    .small-btn{padding:8px 10px;border-radius:8px;border:0;cursor:pointer}
+    .small-btn.delete{background:#e63946;color:white}
+    .small-btn.edit{background:#ffd166;color:#000}
+    .message{margin-bottom:12px}
+    .hint{color:#666;font-size:.9rem;margin-top:6px}
+  </style>
+</head>
+<body>
+  <header class="admin-header">
+    <div><h2 style="margin:0">Green Coast Audio — Admin</h2></div>
+    <div><a class="btn" href="index.html">View Storefront</a></div>
+  </header>
+
+  <main class="admin-main container">
+    <div id="msg" class="message"></div>
+
+    <form id="productForm">
+      <input type="hidden" id="productId">
+
+      <div class="form-row">
+        <input id="title" placeholder="Product title (e.g. Car Radio)" required>
+        <input id="price" type="number" placeholder="Price (KSH)" required>
+      </div>
+
+      <div class="form-row">
+        <input id="image" placeholder="Image URL (https://...)" required>
+        <input id="link" placeholder="WhatsApp link (https://wa.me/...)  (optional)">
+      </div>
+
+      <div style="display:flex;gap:10px">
+        <button class="btn" type="submit" id="saveBtn">Add Product</button>
+        <button class="btn outline" type="button" id="resetBtn">Reset</button>
+      </div>
+
+      <div class="hint">Hint: Image can be hosted anywhere (imgur, your server /public/images). WhatsApp link is optional.</div>
+    </form>
+
+    <h3 style="margin-top:18px">Products</h3>
+    <div id="products" class="product-list"></div>
+  </main>
+
+  <script>
+    const apiBase = '/products'; // relative so it works when server serves static files
+    const form = document.getElementById('productForm');
+    const productsEl = document.getElementById('products');
+    const msgEl = document.getElementById('msg');
+    const saveBtn = document.getElementById('saveBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    function showMsg(text, ok = true) {
+      msgEl.textContent = text;
+      msgEl.style.color = ok ? 'green' : 'red';
+      setTimeout(() => msgEl.textContent = '', 3500);
+    }
+
+    async function loadProducts(){
+      try{
+        const res = await fetch(apiBase);
+        if(!res.ok) throw new Error('Could not fetch products');
+        const products = await res.json();
+        renderProducts(products);
+      }catch(err){
+        console.error(err);
+        showMsg('Error loading products', false);
+      }
+    }
+
+    function renderProducts(products){
+      productsEl.innerHTML = '';
+      products.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.innerHTML = `
+          <img src="${p.image}" alt="${p.title}">
+          <h4>${p.title}</h4>
+          <div class="price">KSH ${p.price}</div>
+          <div style="margin-top:8px"><a class="neg-btn" href="${p.link || '#'}" target="_blank">Negotiate</a></div>
+          <div class="actions">
+            <button class="small-btn edit">Edit</button>
+            <button class="small-btn delete">Delete</button>
+          </div>
+        `;
+
+        const editBtn = div.querySelector('.edit');
+        const delBtn = div.querySelector('.delete');
+        editBtn.addEventListener('click', () => fillForm(p));
+        delBtn.addEventListener('click', () => deleteProduct(p.id));
+
+        productsEl.appendChild(div);
+      });
+
+      if(products.length === 0){
+        productsEl.innerHTML = '<div class="hint">No products yet. Use the form above to add one.</div>';
+      }
+    }
+
+    function fillForm(p){
+      document.getElementById('productId').value = p.id;
+      document.getElementById('title').value = p.title;
+      document.getElementById('price').value = p.price;
+      document.getElementById('image').value = p.image;
+      document.getElementById('link').value = p.link || '';
+      saveBtn.textContent = 'Save Changes';
+      window.scrollTo({top:0,behavior:'smooth'});
+    }
+
+    resetBtn.addEventListener('click', resetForm);
+
+    function resetForm(){
+      form.reset();
+      document.getElementById('productId').value = '';
+      saveBtn.textContent = 'Add Product';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('productId').value;
+      const product = {
+        title: document.getElementById('title').value.trim(),
+        price: Number(document.getElementById('price').value),
+        image: document.getElementById('image').value.trim(),
+        link: document.getElementById('link').value.trim(),
+      };
+
+      try{
+        if(id){
+          const res = await fetch(`${apiBase}/${id}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(product)
+          });
+          if(!res.ok) throw new Error('Update failed');
+          showMsg('Product updated');
+        }else{
+          const res = await fetch(apiBase, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(product)
+          });
+          if(!res.ok) throw new Error('Create failed');
+          showMsg('Product added');
+        }
+        resetForm();
+        loadProducts();
+      }catch(err){
+        console.error(err);
+        showMsg(err.message || 'Request failed', false);
+      }
+    });
+
+    async function deleteProduct(id){
+      if(!confirm('Delete this product?')) return;
+      try{
+        const res = await fetch(`${apiBase}/${id}`, { method: 'DELETE' });
+        if(!res.ok) throw new Error('Delete failed');
+        showMsg('Product deleted');
+        loadProducts();
+      }catch(err){
+        console.error(err);
+        showMsg(err.message || 'Delete failed', false);
+      }
+    }
+
+    // initial load
+    loadProducts();
+  </script>
+</body>
+</html>
