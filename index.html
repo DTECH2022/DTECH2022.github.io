@@ -80,39 +80,34 @@
     <p>Drive with Sound & Style 🚗🎶</p>
   </header>
 
-  <main class="container">
-    <!-- Product 1 -->
-    <div class="product">
-      <img src="https://via.placeholder.com/250x200" alt="Car Radio">
-      <h2>Car Radio</h2>
-      <p>KSH 8,500</p>
-      <a class="btn" href="https://wa.me/254704965666?text=Hello%20Green%20Coast%20Audio!%20I'm%20interested%20in%20the%20Car%20Radio%20(KSH%208,500).">Negotiate on WhatsApp</a>
-    </div>
+  <main class="container" id="products"></main>
+<script>
+  async function loadProducts() {
+    try {
+      const res = await fetch("http://localhost:5000/products"); // backend API
+      const products = await res.json();
+      const container = document.getElementById("products");
+      container.innerHTML = "";
 
-    <!-- Product 2 -->
-    <div class="product">
-      <img src="https://via.placeholder.com/250x200" alt="Subwoofer">
-      <h2>Subwoofer</h2>
-      <p>KSH 15,000</p>
-      <a class="btn" href="https://wa.me/254704965666?text=Hello%20Green%20Coast%20Audio!%20I'm%20interested%20in%20the%20Subwoofer%20(KSH%2015,000).">Negotiate on WhatsApp</a>
-    </div>
+      products.forEach(p => {
+        container.innerHTML += `
+          <div class="product">
+            <img src="${p.image}" alt="${p.title}">
+            <h2>${p.title}</h2>
+            <p>KSH ${p.price}</p>
+            <a class="btn" href="${p.link}">Negotiate on WhatsApp</a>
+          </div>
+        `;
+      });
+    } catch (err) {
+      console.error("Error loading products:", err);
+    }
+  }
 
-    <!-- Product 3 -->
-    <div class="product">
-      <img src="https://via.placeholder.com/250x200" alt="Dash Camera">
-      <h2>Dash Camera</h2>
-      <p>KSH 6,000</p>
-      <a class="btn" href="https://wa.me/254704965666?text=Hello%20Green%20Coast%20Audio!%20I'm%20interested%20in%20the%20Dash%20Camera%20(KSH%206,000).">Negotiate on WhatsApp</a>
-    </div>
+  loadProducts();
+</script>
 
-    <!-- Product 4 -->
-    <div class="product">
-      <img src="https://via.placeholder.com/250x200" alt="Car Accessories">
-      <h2>Car Accessories</h2>
-      <p>KSH 2,500</p>
-      <a class="btn" href="https://wa.me/254704965666?text=Hello%20Green%20Coast%20Audio!%20I'm%20interested%20in%20the%20Car%20Accessories%20(KSH%202,500).">Negotiate on WhatsApp</a>
-    </div>
-  </main>
+
 
   <footer>
     <p>&copy; 2025 Green Coast Audio | WhatsApp: 0704965666</p>
